@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-Compatible-success?style=for-the-badge)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-[**npm**](https://www.npmjs.com/package/jarp-mcp) · [**GitHub**](https://github.com/tersePrompts/jarp-mcp) · [**GitHub Pages**](https://terseprompts.github.io/jarp-mcp/)
+[**npm**](https://www.npmjs.com/package/jarp-mcp) · [**GitHub**](https://github.com/tersePrompts/jarp-mcp)
 
 </div>
 
@@ -298,8 +298,11 @@ In `.clinerules` or project settings:
 
 - **npm**: https://www.npmjs.com/package/jarp-mcp
 - **GitHub**: https://github.com/tersePrompts/jarp-mcp
-- **GitHub Pages**: https://terseprompts.github.io/jarp-mcp/
 - **MCP Protocol**: https://modelcontextprotocol.io
+
+---
+
+> **Works with any MCP client over STDIO** — Claude, Cursor, Windsurf, Cline, Postman, and more.
 
 ---
 

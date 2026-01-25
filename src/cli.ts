@@ -6,9 +6,9 @@ import { JavaClassAnalyzerMCPServer } from './index.js';
 const program = new Command();
 
 program
-    .name('java-class-analyzer-mcp')
-    .description('Java Class Analyzer MCP Server - MCP server for Java class file analysis and decompilation')
-    .version('1.0.0');
+    .name('jarp-mcp')
+    .description('JARP MCP - Java Archive Reader for AI. MCP server that gives AI agents instant access to decompiled Java code.')
+    .version('1.0.1');
 
 program
     .command('start')
@@ -45,8 +45,8 @@ program
     .action(async (options) => {
         const config = {
             mcpServers: {
-                "java-class-analyzer": {
-                    command: "java-class-analyzer-mcp",
+                "jarp-mcp": {
+                    command: "jarp-mcp",
                     args: ["start"],
                     env: {
                         NODE_ENV: "production",

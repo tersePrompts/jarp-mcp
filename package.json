@@ -62,7 +62,7 @@
     "bugs": {
         "url": "https://github.com/tersePrompts/jarp-mcp/issues"
     },
-    "homepage": "https://terseprompts.github.io/jarp-mcp/",
+    "homepage": "https://github.com/tersePrompts/jarp-mcp#readme",
     "engines": {
         "node": ">=16.0.0"
     },

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jarp-mcp": {
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
+    }
+  }
+}

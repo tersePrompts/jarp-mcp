@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="jarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ea580c;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" rx="40" fill="url(#bgGradient)"/>
+
+  <!-- Grid Pattern (subtle) -->
+  <g opacity="0.1">
+    <line x1="0" y1="100" x2="400" y2="100" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="200" x2="400" y2="200" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="300" x2="400" y2="300" stroke="#fff" stroke-width="1"/>
+    <line x1="100" y1="0" x2="100" y2="400" stroke="#fff" stroke-width="1"/>
+    <line x1="200" y1="0" x2="200" y2="400" stroke="#fff" stroke-width="1"/>
+    <line x1="300" y1="0" x2="300" y2="400" stroke="#fff" stroke-width="1"/>
+  </g>
+
+  <!-- JAR Icon -->
+  <g transform="translate(140, 60)">
+    <!-- Jar Body -->
+    <path d="M30,40 L30,130 Q30,140 40,140 L90,140 Q100,140 100,130 L100,40 Z" fill="url(#jarGradient)" opacity="0.9"/>
+    <path d="M30,40 L30,130 Q30,140 40,140 L90,140 Q100,140 100,130 L100,40 Z" fill="none" stroke="#fff" stroke-width="2" opacity="0.3"/>
+
+    <!-- Jar Lid -->
+    <rect x="25" y="25" width="80" height="20" rx="5" fill="#475569"/>
+    <rect x="30" y="28" width="70" height="14" rx="3" fill="#64748b"/>
+
+    <!-- Lid Lines -->
+    <line x1="35" y1="35" x2="95" y2="35" stroke="#334155" stroke-width="2"/>
+    <line x1="35" y1="38" x2="95" y2="38" stroke="#334155" stroke-width="2"/>
+
+    <!-- Jar Label -->
+    <rect x="40" y="60" width="50" height="50" rx="5" fill="#fff" opacity="0.15"/>
+
+    <!-- Code Lines inside JAR -->
+    <g fill="#fff" opacity="0.8">
+      <rect x="45" y="70" width="30" height="3" rx="1.5"/>
+      <rect x="45" y="78" width="40" height="3" rx="1.5"/>
+      <rect x="45" y="86" width="25" height="3" rx="1.5"/>
+      <rect x="45" y="94" width="35" height="3" rx="1.5"/>
+    </g>
+
+    <!-- X-Ray Effect Lines -->
+    <g stroke="#00d4ff" stroke-width="2" opacity="0.6" filter="url(#glow)">
+      <line x1="10" y1="50" x2="120" y2="50">
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite"/>
+      </line>
+      <line x1="10" y1="70" x2="120" y2="70">
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.3s"/>
+      </line>
+      <line x1="10" y1="90" x2="120" y2="90">
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.6s"/>
+      </line>
+    </g>
+
+    <!-- Shine Effect -->
+    <ellipse cx="50" cy="60" rx="15" ry="8" fill="#fff" opacity="0.2"/>
+  </g>
+
+  <!-- Main Title -->
+  <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="52" fill="#fff">JARP</text>
+  <text x="200" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="url(#accentGradient)" font-weight="600">Java Archive Reader</text>
+
+  <!-- Subtitle -->
+  <text x="200" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#94a3b8">for MCP</text>
+
+  <!-- AI Sparkle -->
+  <g transform="translate(320, 100)" filter="url(#glow)">
+    <path d="M0,-15 L4,-4 L15,0 L4,4 L0,15 L-4,4 L-15,0 L-4,-4 Z" fill="#00d4ff">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="scale" values="1;1.2;1" dur="1.5s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <g transform="translate(80, 120)" filter="url(#glow)">
+    <path d="M0,-10 L3,-3 L10,0 L3,3 L0,10 L-3,3 L-10,0 L-3,-3 Z" fill="#7c3aed">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="scale" values="1;1.2;1" dur="2s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Bottom Badge -->
+  <rect x="120" y="360" width="160" height="24" rx="12" fill="url(#accentGradient)" opacity="0.8"/>
+  <text x="200" y="376" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#fff" font-weight="600">Give AI X-Ray Vision</text>
+</svg>

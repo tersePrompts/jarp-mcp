@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm outdated:*)",
+      "Bash(npm view:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(git tag:*)",
+      "Bash(echo:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(npm pack:*)",
+      "Bash(dir:*)",
+      "Bash(node:*)",
+      "Bash(npx jarp-mcp:*)",
+      "Bash(claude -p \"List all available MCP tools\")",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(npx:*)"
+    ]
+  }
+}

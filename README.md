@@ -102,7 +102,7 @@ npm run build
 
 ## Configuration
 
-### Claude Desktop
+### Claude Desktop (Zero-Setup npx)
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 
@@ -112,36 +112,37 @@ npm run build
 {
   "mcpServers": {
     "jarp-mcp": {
-      "command": "jarp-mcp",
-      "args": ["start"]
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
     }
   }
 }
 ```
 
-### Claude Code / CLI
+### Claude Desktop (Global Install)
 
-Create `.claude/mcp-config.json` in your project root:
+If you've installed globally with `npm install -g jarp-mcp`:
+
+### Claude Code / CLI (Zero-Setup npx)
+
+Create `.claude/mcp-config.json` in your Java project root:
 
 ```json
 {
   "mcpServers": {
     "jarp-mcp": {
-      "command": "node",
-      "args": [
-        "node_modules/jarp-mcp/dist/cli.js",
-        "start"
-      ],
-      "cwd": "<your-project-path>",
-      "env": {
-        "NODE_ENV": "production",
-        "MAVEN_REPO": "C:\\Users\\YOUR_USER\\.m2\\repository",
-        "JAVA_HOME": "C:\\Program Files\\Java\\jdk-21"
-      }
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
     }
   }
 }
 ```
+
+That's it! No npm install required - CFR decompiler is bundled.
+
+### Claude Code / CLI (Local Install)
+
+If you've installed locally with `npm install jarp-mcp`:
 
 **macOS/Linux example:**
 ```json

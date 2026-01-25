@@ -63,7 +63,21 @@ JARP-MCP provides AI agents with direct access to decompiled Java source code fr
 
 ## Installation
 
-### Quick Install (Recommended)
+### Zero-Setup (npx) - No Installation Required!
+
+**Just run it directly:**
+
+```bash
+npx jarp-mcp
+```
+
+That's it! CFR decompiler is bundled. No setup, no configuration needed.
+
+> **Requirements:** Java 8+ must be installed on your system.
+
+---
+
+### Quick Install (Recommended for frequent use)
 
 ```bash
 npm install -g jarp-mcp

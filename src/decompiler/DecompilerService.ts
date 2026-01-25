@@ -212,33 +212,49 @@ export class DecompilerService {
     }
 
     /**
+     * Get package root directory (works with npx, npm install -g, and local dev)
+     */
+    private getPackageRoot(): string {
+        // When running from compiled dist/decompiler/DecompilerService.js
+        // __dirname = dist/decompiler/, so we go up 3 levels to get package root
+        const distDir = path.dirname(__dirname); // dist/
+        return path.dirname(distDir); // package root
+    }
+
+    /**
      * Find CFR jar package path
      */
     private async findCfrJar(): Promise<string> {
-        // Try to find CFR from multiple possible locations
-        const searchPaths = [
-            path.join(process.cwd(), 'lib'),
-            process.cwd(),
-            path.join(__dirname, '..', '..', 'lib'),
-            path.join(__dirname, '..', '..'),
-        ];
+        // 1. Check CFR_PATH env var first (allows custom CFR version)
+        if (process.env.CFR_PATH && await fs.pathExists(process.env.CFR_PATH)) {
+            return process.env.CFR_PATH;
+        }
 
-        for (const searchPath of searchPaths) {
-            if (await fs.pathExists(searchPath)) {
-                const files = await readdir(searchPath);
-                const cfrJar = files.find(file => /^cfr-.*\.jar$/.test(file));
-                if (cfrJar) {
-                    return path.join(searchPath, cfrJar);
-                }
+        // 2. Try bundled CFR at package root lib/ (works with npx and npm install)
+        const bundledLibPath = path.join(this.getPackageRoot(), 'lib');
+        if (await fs.pathExists(bundledLibPath)) {
+            const files = await readdir(bundledLibPath);
+            const cfrJar = files.find(file => /^cfr-.*\.jar$/.test(file));
+            if (cfrJar) {
+                return path.join(bundledLibPath, cfrJar);
             }
         }
 
-        // If not found, try to find from classpath
+        // 3. Try current working directory lib/ (for local development)
+        const cwdLibPath = path.join(process.cwd(), 'lib');
+        if (await fs.pathExists(cwdLibPath)) {
+            const files = await readdir(cwdLibPath);
+            const cfrJar = files.find(file => /^cfr-.*\.jar$/.test(file));
+            if (cfrJar) {
+                return path.join(cwdLibPath, cfrJar);
+            }
+        }
+
+        // 4. Try CLASSPATH (legacy support)
         const classpath = process.env.CLASSPATH || '';
         const classpathEntries = classpath.split(path.delimiter);
-
         for (const entry of classpathEntries) {
-            if (entry.includes('cfr') && entry.endsWith('.jar')) {
+            if (entry.includes('cfr') && entry.endsWith('.jar') && await fs.pathExists(entry)) {
                 return entry;
             }
         }

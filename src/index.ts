@@ -21,18 +21,10 @@ export class JavaClassAnalyzerMCPServer {
             {
                 name: 'java-class-analyzer',
                 version: '1.0.0',
+            },
+            {
                 capabilities: {
-                    tools: {
-                        scan_dependencies: {
-                            description: '扫描Maven项目的所有依赖，建立类名到JAR包的映射索引',
-                        },
-                        decompile_class: {
-                            description: '反编译指定的Java类文件，返回Java源码',
-                        },
-                        analyze_class: {
-                            description: '分析Java类的结构、方法、字段等信息',
-                        },
-                    },
+                    tools: {},
                 },
             }
         );
@@ -50,17 +42,17 @@ export class JavaClassAnalyzerMCPServer {
                 tools: [
                     {
                         name: 'scan_dependencies',
-                        description: '扫描Maven项目的所有依赖，建立类名到JAR包的映射索引',
+                        description: 'Scan all dependencies of a Maven project and build mapping index from class names to JAR packages',
                         inputSchema: {
                             type: 'object',
                             properties: {
                                 projectPath: {
                                     type: 'string',
-                                    description: 'Maven项目根目录路径',
+                                    description: 'Maven project root directory path',
                                 },
                                 forceRefresh: {
                                     type: 'boolean',
-                                    description: '是否强制刷新索引',
+                                    description: 'Whether to force refresh index',
                                     default: false,
                                 },
                             },
@@ -69,26 +61,26 @@ export class JavaClassAnalyzerMCPServer {
                     },
                     {
                         name: 'decompile_class',
-                        description: '反编译指定的Java类文件，返回Java源码',
+                        description: 'Decompile specified Java class file and return Java source code',
                         inputSchema: {
                             type: 'object',
                             properties: {
                                 className: {
                                     type: 'string',
-                                    description: '要反编译的Java类全名，如：com.example.QueryBizOrderDO',
+                                    description: 'Fully qualified name of the Java class to decompile, e.g., com.example.QueryBizOrderDO',
                                 },
                                 projectPath: {
                                     type: 'string',
-                                    description: 'Maven项目根目录路径',
+                                    description: 'Maven project root directory path',
                                 },
                                 useCache: {
                                     type: 'boolean',
-                                    description: '是否使用缓存，默认true',
+                                    description: 'Whether to use cache, default true',
                                     default: true,
                                 },
                                 cfrPath: {
                                     type: 'string',
-                                    description: 'CFR反编译工具的jar包路径，可选',
+                                    description: 'JAR package path of CFR decompilation tool, optional',
                                 },
                             },
                             required: ['className', 'projectPath'],
@@ -96,17 +88,17 @@ export class JavaClassAnalyzerMCPServer {
                     },
                     {
                         name: 'analyze_class',
-                        description: '分析Java类的结构、方法、字段等信息',
+                        description: 'Analyze structure, methods, fields and other information of a Java class',
                         inputSchema: {
                             type: 'object',
                             properties: {
                                 className: {
                                     type: 'string',
-                                    description: '要分析的Java类全名',
+                                    description: 'Fully qualified name of the Java class to analyze',
                                 },
                                 projectPath: {
                                     type: 'string',
-                                    description: 'Maven项目根目录路径',
+                                    description: 'Maven project root directory path',
                                 },
                             },
                             required: ['className', 'projectPath'],
@@ -131,12 +123,12 @@ export class JavaClassAnalyzerMCPServer {
                         throw new Error(`Unknown tool: ${name}`);
                 }
             } catch (error) {
-                console.error(`工具调用异常 [${name}]:`, error);
+                console.error(`Tool call exception [${name}]:`, error);
                 return {
                     content: [
                         {
                             type: 'text',
-                            text: `工具调用失败: ${error instanceof Error ? error.message : String(error)}\n\n建议:\n1. 检查输入参数是否正确\n2. 确保已运行必要的准备工作\n3. 查看服务器日志获取详细信息`,
+                            text: `Tool call failed: ${error instanceof Error ? error.message : String(error)}\n\nSuggestions:\n1. Check if input parameters are correct\n2. Ensure necessary preparations have been completed\n3. Check server logs for detailed information`,
                         },
                     ],
                 };
@@ -153,11 +145,11 @@ export class JavaClassAnalyzerMCPServer {
             content: [
                 {
                     type: 'text',
-                    text: `依赖扫描完成！\n\n` +
-                        `扫描的JAR包数量: ${result.jarCount}\n` +
-                        `索引的类数量: ${result.classCount}\n` +
-                        `索引文件路径: ${result.indexPath}\n\n` +
-                        `示例索引条目:\n${result.sampleEntries.slice(0, 5).join('\n')}`,
+                    text: `Dependency scanning complete!\n\n` +
+                        `Scanned JAR count: ${result.jarCount}\n` +
+                        `Indexed class count: ${result.classCount}\n` +
+                        `Index file path: ${result.indexPath}\n\n` +
+                        `Sample index entries:\n${result.sampleEntries.slice(0, 5).join('\n')}`,
                 },
             ],
         };
@@ -167,9 +159,9 @@ export class JavaClassAnalyzerMCPServer {
         const { className, projectPath, useCache = true, cfrPath } = args;
 
         try {
-            console.error(`开始反编译类: ${className}, 项目路径: ${projectPath}, 使用缓存: ${useCache}, CFR路径: ${cfrPath || '自动查找'}`);
+            console.error(`Starting decompilation of class: ${className}, project path: ${projectPath}, use cache: ${useCache}, CFR path: ${cfrPath || 'auto-detect'}`);
 
-            // 检查索引是否存在，如果不存在则先创建
+            // Check if index exists, create if not
             await this.ensureIndexExists(projectPath);
 
             const sourceCode = await this.decompiler.decompileClass(className, projectPath, useCache, cfrPath);
@@ -179,7 +171,7 @@ export class JavaClassAnalyzerMCPServer {
                     content: [
                         {
                             type: 'text',
-                            text: `警告: 类 ${className} 的反编译结果为空，可能是CFR工具问题或类文件损坏`,
+                            text: `Warning: Decompilation result for class ${className} is empty, possibly due to CFR tool issues or corrupted class file`,
                         },
                     ],
                 };
@@ -189,17 +181,17 @@ export class JavaClassAnalyzerMCPServer {
                 content: [
                     {
                         type: 'text',
-                        text: `类 ${className} 的反编译源码:\n\n\`\`\`java\n${sourceCode}\n\`\`\``,
+                        text: `Decompiled source code for class ${className}:\n\n\`\`\`java\n${sourceCode}\n\`\`\``,
                     },
                 ],
             };
         } catch (error) {
-            console.error(`反编译类 ${className} 失败:`, error);
+            console.error(`Failed to decompile class ${className}:`, error);
             return {
                 content: [
                     {
                         type: 'text',
-                        text: `反编译失败: ${error instanceof Error ? error.message : String(error)}\n\n建议:\n1. 确保已运行 scan_dependencies 建立类索引\n2. 检查CFR工具是否正确安装\n3. 验证类名是否正确`,
+                        text: `Decompilation failed: ${error instanceof Error ? error.message : String(error)}\n\nSuggestions:\n1. Ensure scan_dependencies has been run to build class index\n2. Check if CFR tool is properly installed\n3. Verify class name is correct`,
                     },
                 ],
             };
@@ -209,20 +201,20 @@ export class JavaClassAnalyzerMCPServer {
     private async handleAnalyzeClass(args: any) {
         const { className, projectPath } = args;
 
-        // 检查索引是否存在，如果不存在则先创建
+        // Check if index exists, create if not
         await this.ensureIndexExists(projectPath);
 
         const analysis = await this.analyzer.analyzeClass(className, projectPath);
 
-        let result = `类 ${className} 的分析结果:\n\n`;
-        result += `包名: ${analysis.packageName}\n`;
-        result += `类名: ${analysis.className}\n`;
-        result += `修饰符: ${analysis.modifiers.join(' ')}\n`;
-        result += `父类: ${analysis.superClass || '无'}\n`;
-        result += `实现的接口: ${analysis.interfaces.join(', ') || '无'}\n\n`;
+        let result = `Analysis result for class ${className}:\n\n`;
+result += `Package name: ${analysis.packageName}\n`;
+        result += `Class name: ${analysis.className}\n`;
+        result += `Modifiers: ${analysis.modifiers.join(' ')}\n`;
+        result += `Super class: ${analysis.superClass || 'None'}\n`;
+        result += `Implemented interfaces: ${analysis.interfaces.join(', ') || 'None'}\n\n`;
 
         if (analysis.fields.length > 0) {
-            result += `字段 (${analysis.fields.length}个):\n`;
+            result += `Fields (${analysis.fields.length}):\n`;
             analysis.fields.forEach(field => {
                 result += `  - ${field.modifiers.join(' ')} ${field.type} ${field.name}\n`;
             });
@@ -230,7 +222,7 @@ export class JavaClassAnalyzerMCPServer {
         }
 
         if (analysis.methods.length > 0) {
-            result += `方法 (${analysis.methods.length}个):\n`;
+            result += `Methods (${analysis.methods.length}):\n`;
             analysis.methods.forEach(method => {
                 result += `  - ${method.modifiers.join(' ')} ${method.returnType} ${method.name}(${method.parameters.join(', ')})\n`;
             });
@@ -248,7 +240,7 @@ export class JavaClassAnalyzerMCPServer {
     }
 
     /**
-     * 确保索引文件存在，如果不存在则自动创建
+     * Ensure index file exists, create automatically if not
      */
     private async ensureIndexExists(projectPath: string): Promise<void> {
         const fs = await import('fs-extra');
@@ -257,13 +249,13 @@ export class JavaClassAnalyzerMCPServer {
         const indexPath = path.join(projectPath, '.mcp-class-index.json');
 
         if (!(await fs.pathExists(indexPath))) {
-            console.error('索引文件不存在，正在自动创建...');
+            console.error('Index file does not exist, creating automatically...');
             try {
                 await this.scanner.scanProject(projectPath, false);
-                console.error('索引文件创建完成');
+                console.error('Index file creation complete');
             } catch (error) {
-                console.error('自动创建索引失败:', error);
-                throw new Error(`无法创建类索引文件: ${error instanceof Error ? error.message : String(error)}`);
+                console.error('Failed to create index automatically:', error);
+                throw new Error(`Unable to create class index file: ${error instanceof Error ? error.message : String(error)}`);
             }
         }
     }
@@ -283,18 +275,18 @@ export class JavaClassAnalyzerMCPServer {
 
 const mcpServer = new JavaClassAnalyzerMCPServer();
 
-// 添加全局异常处理，防止服务器崩溃
+// Add global exception handling to prevent server crashes
 process.on('uncaughtException', (error) => {
-    console.error('未捕获的异常:', error);
-    // 不退出进程，继续运行
+    console.error('Uncaught exception:', error);
+    // Don't exit process, continue running
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('未处理的Promise拒绝:', reason);
-    // 不退出进程，继续运行
+    console.error('Unhandled Promise rejection:', reason);
+    // Don't exit process, continue running
 });
 
 mcpServer.run().catch((error) => {
-    console.error('服务器启动失败:', error);
+    console.error('Server startup failed:', error);
     process.exit(1);
 });

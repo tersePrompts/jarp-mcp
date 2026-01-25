@@ -1,91 +1,91 @@
-# 发布指南
+# Publishing Guide
 
-## 发布到npm
+## Publishing to npm
 
-### 1. 准备工作
+### 1. Prerequisites
 
-确保你已经：
-- [ ] 在npm上注册了账号，如`https://registry.npmjs.org`
-- [ ] 登录到npm：`npm login --registry https://registry.npmjs.org`
-- [ ] 更新了package.json中的repository URL
-- [ ] 更新了README.md中的GitHub链接
-- [ ] 确认本地镜像源一致。使用`npm config get registry`查看和`npm config set registry https://registry.npmjs.org`设置
+Ensure you have:
+- [ ] Registered an account on npm, e.g., `https://registry.npmjs.org`
+- [ ] Logged in to npm: `npm login --registry https://registry.npmjs.org`
+- [ ] Updated repository URL in package.json
+- [ ] Updated GitHub links in README.md
+- [ ] Confirmed local registry consistency. Use `npm config get registry` to check and `npm config set registry https://registry.npmjs.org` to set
 
-### 2. 发布步骤
+### 2. Publishing Steps
 
-#### 首次发布
+#### First-time Publishing
 
 ```bash
-# 1. 构建项目
+# 1. Build project
 npm run build
 
-# 2. 测试包内容
+# 2. Test package contents
 npm pack --dry-run
 
-# 3. 发布到npm
+# 3. Publish to npm
 npm publish
 ```
 
-#### 更新版本
+#### Version Updates
 
 ```bash
-# 更新补丁版本 (1.0.0 -> 1.0.1)
+# Update patch version (1.0.0 -> 1.0.1)
 npm run version:patch
 
-# 更新小版本 (1.0.0 -> 1.1.0)
+# Update minor version (1.0.0 -> 1.1.0)
 npm run version:minor
 
-# 更新大版本 (1.0.0 -> 2.0.0)
+# Update major version (1.0.0 -> 2.0.0)
 npm run version:major
 
-# 发布
+# Publish
 npm run publish:npm
 ```
 
-#### 发布测试版本
+#### Publishing Test Versions
 
 ```bash
-# 发布beta版本
+# Publish beta version
 npm run publish:beta
 ```
 
-### 3. 验证发布
+### 3. Verify Publishing
 
-发布后可以验证：
+After publishing, you can verify:
 
 ```bash
-# 全局安装测试
+# Global installation test
 npm install -g java-class-analyzer-mcp-server
 
-# 测试命令
+# Test commands
 java-class-analyzer-mcp --help
 java-class-analyzer-mcp config -o test-config.json
 ```
 
-### 4. 用户安装和使用
+### 4. User Installation and Usage
 
-用户可以通过以下方式安装：
+Users can install via the following methods:
 
 ```bash
-# 全局安装
+# Global installation
 npm install -g java-class-analyzer-mcp-server
 
-# 本地安装
+# Local installation
 npm install java-class-analyzer-mcp-server
 ```
 
-### 5. 注意事项
+### 5. Important Notes
 
-- 确保每次发布前都运行了 `npm run build`
-- 检查 `.npmignore` 文件确保只发布必要的内容
-- 更新版本号后会自动创建git tag
-- 发布前确保所有测试通过
-- 检查生成的配置文件是否正确
+- Ensure `npm run build` is run before each publish
+- Check `.npmignore` file to ensure only necessary content is published
+- Git tags are automatically created after version updates
+- Ensure all tests pass before publishing
+- Check if generated configuration files are correct
 
-### 6. 故障排除
+### 6. Troubleshooting
 
-如果发布失败：
-1. 检查包名是否已被占用
-2. 确保版本号唯一
-3. 检查npm登录状态
-4. 验证package.json配置
+If publishing fails:
+1. Check if package name is already taken
+2. Ensure version number is unique
+3. Check npm login status
+4. Verify package.json configuration

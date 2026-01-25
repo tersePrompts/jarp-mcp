@@ -26,24 +26,24 @@ export class DependencyScanner {
     private indexCache: Map<string, ClassIndexEntry[]> = new Map();
 
     /**
-     * 扫描Maven项目的所有依赖，建立类名到JAR包的映射索引
+     * Scan all dependencies of a Maven project and build mapping index from class names to JAR packages
      */
     async scanProject(projectPath: string, forceRefresh: boolean = false): Promise<ScanResult> {
         const indexPath = path.join(projectPath, '.mcp-class-index.json');
         const isDebug = process.env.NODE_ENV === 'development';
 
-        // 如果强制刷新，先删除旧的索引文件
+        // If force refresh, delete old index file first
         if (forceRefresh && await fs.pathExists(indexPath)) {
             if (isDebug) {
-                console.error('强制刷新：删除旧的索引文件');
+                console.error('Force refresh: deleting old index file');
             }
             await fs.remove(indexPath);
         }
 
-        // 检查缓存
+        // Check cache
         if (!forceRefresh && await fs.pathExists(indexPath)) {
             if (isDebug) {
-                console.error('使用缓存的类索引');
+                console.error('Using cached class index');
             }
             const cachedIndex = await fs.readJson(indexPath);
             return {
@@ -55,14 +55,14 @@ export class DependencyScanner {
         }
 
         if (isDebug) {
-            console.error('开始扫描Maven依赖...');
+            console.error('Starting Maven dependency scan...');
         }
 
-        // 1. 获取Maven依赖树
+        // 1. Get Maven dependency tree
         const dependencies = await this.getMavenDependencies(projectPath);
-        console.error(`找到 ${dependencies.length} 个依赖JAR包`);
+        console.error(`Found ${dependencies.length} dependency JARs`);
 
-        // 2. 解析每个JAR包，建立类索引
+        // 2. Parse each JAR package and build class index
         const classIndex: ClassIndexEntry[] = [];
         let processedJars = 0;
 
@@ -73,14 +73,14 @@ export class DependencyScanner {
                 processedJars++;
 
                 if (processedJars % 10 === 0) {
-                    console.error(`已处理 ${processedJars}/${dependencies.length} 个JAR包`);
+                    console.error(`Processed ${processedJars}/${dependencies.length} JARs`);
                 }
             } catch (error) {
-                console.warn(`处理JAR包失败: ${jarPath}, 错误: ${error}`);
+                console.warn(`Failed to process JAR: ${jarPath}, error: ${error}`);
             }
         }
 
-        // 3. 保存索引到文件
+        // 3. Save index to file
         const result: ScanResult = {
             jarCount: processedJars,
             classCount: classIndex.length,
@@ -96,35 +96,35 @@ export class DependencyScanner {
             lastUpdated: new Date().toISOString()
         }, { spaces: 2 });
 
-        console.error(`扫描完成！处理了 ${processedJars} 个JAR包，索引了 ${classIndex.length} 个类`);
+        console.error(`Scan complete! Processed ${processedJars} JARs, indexed ${classIndex.length} classes`);
 
         return result;
     }
 
     /**
-     * 获取Maven依赖树中的所有JAR包路径
+     * Get all JAR package paths from Maven dependency tree
      */
     private async getMavenDependencies(projectPath: string): Promise<string[]> {
         try {
-            // 构建Maven命令路径
+            // Build Maven command path
             const mavenCmd = this.getMavenCommand();
 
-            // 执行 mvn dependency:tree 命令
+            // Execute mvn dependency:tree command
             const { stdout } = await execAsync(`${mavenCmd} dependency:tree -DoutputType=text`, {
                 cwd: projectPath,
-                timeout: 60000 // 60秒超时
+                timeout: 60000 // 60 second timeout
             });
 
-            // 解析输出，提取JAR包路径
+            // Parse output, extract JAR package paths
             const jarPaths = new Set<string>();
             const lines = stdout.split('\n');
 
             for (const line of lines) {
-                // 匹配类似这样的行: [INFO] +- com.example:my-lib:jar:1.0.0:compile
+                // Match lines like: [INFO] +- com.example:my-lib:jar:1.0.0:compile
                 const match = line.match(/\[INFO\].*?([a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+)/);
                 if (match) {
                     const dependency = match[1];
-                    // 构建JAR包路径
+                    // Build JAR package path
                     const jarPath = await this.resolveJarPath(dependency, projectPath);
                     if (jarPath && await fs.pathExists(jarPath)) {
                         jarPaths.add(jarPath);
@@ -134,20 +134,20 @@ export class DependencyScanner {
 
             return Array.from(jarPaths);
         } catch (error) {
-            console.error('获取Maven依赖失败:', error);
-            // 如果Maven命令失败，尝试从本地仓库扫描
+            console.error('Failed to get Maven dependencies:', error);
+            // If Maven command fails, try scanning from local repository
             return await this.scanLocalMavenRepo(projectPath);
         }
     }
 
     /**
-     * 从本地Maven仓库扫描JAR包
+     * Scan JAR packages from local Maven repository
      */
     private async scanLocalMavenRepo(projectPath: string): Promise<string[]> {
         const mavenRepoPath = this.getMavenRepositoryPath();
 
         if (!await fs.pathExists(mavenRepoPath)) {
-            throw new Error('Maven本地仓库不存在');
+            throw new Error('Maven local repository does not exist');
         }
 
         const jarFiles: string[] = [];
@@ -171,7 +171,7 @@ export class DependencyScanner {
     }
 
     /**
-     * 解析依赖坐标，获取JAR包路径
+     * Resolve dependency coordinates to get JAR package path
      */
     private async resolveJarPath(dependency: string, projectPath: string): Promise<string | null> {
         const [groupId, artifactId, type, version, scope] = dependency.split(':');
@@ -180,7 +180,7 @@ export class DependencyScanner {
             return null;
         }
 
-        // 使用统一的Maven仓库路径获取方法
+        // Use unified Maven repository path getter method
         const mavenRepoPath = this.getMavenRepositoryPath();
         const groupPath = groupId.replace(/\./g, '/');
         const jarPath = path.join(
@@ -195,7 +195,7 @@ export class DependencyScanner {
     }
 
     /**
-     * 从JAR包中提取所有类文件信息
+     * Extract all class file information from JAR package
      */
     private async extractClassesFromJar(jarPath: string): Promise<ClassIndexEntry[]> {
         return new Promise((resolve, reject) => {
@@ -242,13 +242,13 @@ export class DependencyScanner {
     }
 
     /**
-     * 根据类名查找对应的JAR包路径
+     * Find corresponding JAR package path by class name
      */
     async findJarForClass(className: string, projectPath: string): Promise<string | null> {
         const indexPath = path.join(projectPath, '.mcp-class-index.json');
 
         if (!await fs.pathExists(indexPath)) {
-            throw new Error('类索引不存在，请先运行依赖扫描');
+            throw new Error('Class index does not exist, please run dependency scan first');
         }
 
         const indexData = await fs.readJson(indexPath);
@@ -259,7 +259,7 @@ export class DependencyScanner {
     }
 
     /**
-     * 获取所有已索引的类名
+     * Get all indexed class names
      */
     async getAllClassNames(projectPath: string): Promise<string[]> {
         const indexPath = path.join(projectPath, '.mcp-class-index.json');
@@ -275,7 +275,7 @@ export class DependencyScanner {
     }
 
     /**
-     * 获取Maven命令路径
+     * Get Maven command path
      */
     private getMavenCommand(): string {
         const mavenHome = process.env.MAVEN_HOME;
@@ -283,20 +283,20 @@ export class DependencyScanner {
             const mavenCmd = process.platform === 'win32' ? 'mvn.cmd' : 'mvn';
             return path.join(mavenHome, 'bin', mavenCmd);
         }
-        return 'mvn'; // 回退到PATH中的mvn
+        return 'mvn'; // Fallback to mvn in PATH
     }
 
     /**
-     * 获取Maven本地仓库路径
+     * Get Maven local repository path
      */
     private getMavenRepositoryPath(): string {
-        // 1. 优先使用环境变量 MAVEN_REPO 指定的仓库路径
+        // 1. Prioritize repository path specified by MAVEN_REPO environment variable
         const mavenRepo = process.env.MAVEN_REPO;
         if (mavenRepo) {
             return mavenRepo;
         }
 
-        // 2. 使用默认的Maven本地仓库路径
+        // 2. Use default Maven local repository path
         const homeDir = process.env.HOME || process.env.USERPROFILE;
         return path.join(homeDir!, '.m2', 'repository');
     }

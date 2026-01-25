@@ -36,28 +36,28 @@ export class JavaClassAnalyzer {
     }
 
     /**
-     * 分析Java类的结构信息
+     * Analyze Java class structure information
      */
     async analyzeClass(className: string, projectPath: string): Promise<ClassAnalysis> {
         try {
-            // 1. 获取类文件路径
+            // 1. Get class file path
             const jarPath = await this.scanner.findJarForClass(className, projectPath);
             if (!jarPath) {
-                throw new Error(`未找到类 ${className} 对应的JAR包`);
+                throw new Error(`JAR package for class ${className} not found`);
             }
 
-            // 2. 直接使用 javap 分析JAR包中的类
+            // 2. Use javap to analyze class in JAR package directly
             const analysis = await this.analyzeClassWithJavap(jarPath, className);
 
             return analysis;
         } catch (error) {
-            console.error(`分析类 ${className} 失败:`, error);
+            console.error(`Failed to analyze class ${className}:`, error);
             throw error;
         }
     }
 
     /**
-     * 使用 javap 工具分析JAR包中的类结构
+     * Use javap tool to analyze class structure in JAR package
      */
     private async analyzeClassWithJavap(jarPath: string, className: string): Promise<ClassAnalysis> {
         try {
@@ -65,7 +65,7 @@ export class JavaClassAnalyzer {
             const quotedJavapCmd = javapCmd.includes(' ') ? `"${javapCmd}"` : javapCmd;
             const quotedJarPath = jarPath.includes(' ') ? `"${jarPath}"` : jarPath;
 
-            // 使用 javap -v 获取详细信息（包括参数名称）
+            // Use javap -v to get detailed information (including parameter names)
             const { stdout } = await execAsync(
                 `${quotedJavapCmd} -v -cp ${quotedJarPath} ${className}`,
                 { timeout: 10000 }
@@ -73,13 +73,13 @@ export class JavaClassAnalyzer {
 
             return this.parseJavapOutput(stdout, className);
         } catch (error) {
-            console.error('javap 分析失败:', error);
-            throw new Error(`javap 分析失败: ${error instanceof Error ? error.message : String(error)}`);
+            console.error('javap analysis failed:', error);
+            throw new Error(`javap analysis failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
     /**
-     * 解析 javap 输出
+     * Parse javap output
     */
     private parseJavapOutput(output: string, className: string): ClassAnalysis {
         const lines = output.split('\n');
@@ -101,14 +101,14 @@ export class JavaClassAnalyzer {
             const line = lines[i];
             const trimmedLine = line.trim();
 
-            // 解析类声明
+            // Parse class declaration
             if (trimmedLine.startsWith('public class') || trimmedLine.startsWith('public interface') ||
                 trimmedLine.startsWith('public enum')) {
                 this.parseClassDeclaration(trimmedLine, analysis);
                 continue;
             }
 
-            // 解析方法声明
+            // Parse method declaration
             if (trimmedLine.startsWith('public ') && trimmedLine.includes('(') && trimmedLine.includes(')')) {
                 currentMethod = this.parseMethodFromJavap(trimmedLine);
                 if (currentMethod) {
@@ -118,20 +118,20 @@ export class JavaClassAnalyzer {
                 continue;
             }
 
-            // 检测 LocalVariableTable 开始
+            // Detect LocalVariableTable start
             if (trimmedLine === 'LocalVariableTable:') {
                 inLocalVariableTable = true;
                 continue;
             }
 
-            // 解析 LocalVariableTable 中的参数名称
+            // Parse parameter names in LocalVariableTable
             if (inLocalVariableTable && currentMethod) {
                 if (trimmedLine.startsWith('Start') || trimmedLine.startsWith('Slot')) {
-                    continue; // 跳过表头
+                    continue; // Skip header
                 }
 
                 if (trimmedLine === '') {
-                    // LocalVariableTable 结束，立即更新当前方法的参数名称
+                    // LocalVariableTable ended, immediately update current method's parameter names
                     if (Object.keys(methodParameters).length > 0) {
                         const updatedParams: string[] = [];
                         for (let j = 0; j < currentMethod.parameters.length; j++) {
@@ -146,28 +146,28 @@ export class JavaClassAnalyzer {
                     continue;
                 }
 
-                // 解析参数行: "0       6     0  file   Ljava/io/File;"
+                // Parse parameter line: "0       6     0  file   Ljava/io/File;"
                 const paramMatch = trimmedLine.match(/^\s*\d+\s+\d+\s+(\d+)\s+(\w+)\s+(.+)$/);
                 if (paramMatch) {
                     const slot = parseInt(paramMatch[1]);
                     const paramName = paramMatch[2];
                     const paramType = paramMatch[3];
 
-                    // 只处理参数（slot >= 0，但排除局部变量）
-                    // 参数通常在前几个 slot 中，局部变量在后面
+                    // Only handle parameters (slot >= 0, but exclude local variables)
+                    // Parameters are usually in the first few slots, local variables come after
                     if (slot >= 0 && slot < currentMethod.parameters.length) {
                         methodParameters[slot] = paramName;
                     }
                 }
             }
 
-            // 检测方法结束 - 当遇到下一个方法或类结束时
+            // Detect method end - when next method or class end is encountered
             if (currentMethod && (
                 (trimmedLine.startsWith('public ') && trimmedLine.includes('(') && trimmedLine.includes(')')) ||
                 trimmedLine.startsWith('}') ||
                 trimmedLine.startsWith('SourceFile:')
             )) {
-                // 更新方法的参数名称
+                // Update method's parameter names
                 if (Object.keys(methodParameters).length > 0) {
                     const updatedParams: string[] = [];
                     for (let j = 0; j < currentMethod.parameters.length; j++) {
@@ -187,14 +187,14 @@ export class JavaClassAnalyzer {
     }
 
     /**
-     * 解析类声明
+     * Parse class declaration
      */
     private parseClassDeclaration(line: string, analysis: ClassAnalysis): void {
-        // 提取修饰符
+        // Extract modifiers
         const modifiers = line.match(/\b(public|private|protected|static|final|abstract|strictfp)\b/g) || [];
         analysis.modifiers = modifiers;
 
-        // 提取包名（从类名推断）
+        // Extract package name (inferred from class name)
         const classMatch = line.match(/(?:public\s+)?(?:class|interface|enum)\s+([a-zA-Z_$][a-zA-Z0-9_$.]*)/);
         if (classMatch) {
             const fullClassName = classMatch[1];
@@ -205,13 +205,13 @@ export class JavaClassAnalyzer {
             }
         }
 
-        // 提取父类
+        // Extract superclass
         const extendsMatch = line.match(/extends\s+([a-zA-Z_$][a-zA-Z0-9_$.]*)/);
         if (extendsMatch) {
             analysis.superClass = extendsMatch[1];
         }
 
-        // 提取接口
+        // Extract interfaces
         const implementsMatch = line.match(/implements\s+([^{]+)/);
         if (implementsMatch) {
             const interfaces = implementsMatch[1]
@@ -223,18 +223,18 @@ export class JavaClassAnalyzer {
     }
 
     /**
-     * 从 javap 输出解析方法
+     * Parse method from javap output
      */
     private parseMethodFromJavap(line: string): ClassMethod | null {
         try {
             const trimmedLine = line.trim();
 
-            // 提取修饰符
+// Extract modifiers
             const modifiers: string[] = [];
             let startIndex = 0;
             const modifierWords = ['public', 'private', 'protected', 'static', 'final', 'abstract', 'synchronized', 'native'];
 
-            // 处理多个修饰符
+            // Handle multiple modifiers
             let remainingLine = trimmedLine;
             while (true) {
                 let foundModifier = false;
@@ -252,14 +252,14 @@ export class JavaClassAnalyzer {
                 }
             }
 
-            // 查找方法名和参数部分
+            // Find method name and parameters part
             const parenIndex = trimmedLine.indexOf('(');
             if (parenIndex === -1) return null;
 
             const closeParenIndex = trimmedLine.indexOf(')', parenIndex);
             if (closeParenIndex === -1) return null;
 
-            // 提取返回类型和方法名
+            // Extract return type and method name
             const beforeParen = trimmedLine.substring(startIndex, parenIndex).trim();
             const lastSpaceIndex = beforeParen.lastIndexOf(' ');
             if (lastSpaceIndex === -1) return null;
@@ -267,12 +267,12 @@ export class JavaClassAnalyzer {
             const returnType = beforeParen.substring(0, lastSpaceIndex).trim();
             const methodName = beforeParen.substring(lastSpaceIndex + 1).trim();
 
-            // 提取参数
+            // Extract parameters
             const paramsStr = trimmedLine.substring(parenIndex + 1, closeParenIndex).trim();
             const parameters: string[] = [];
 
             if (paramsStr) {
-                // 处理参数，需要考虑泛型和嵌套类型
+                // Handle parameters, need to consider generics and nested types
                 const paramParts = this.splitParameters(paramsStr);
                 for (const param of paramParts) {
                     const trimmedParam = param.trim();
@@ -289,13 +289,13 @@ export class JavaClassAnalyzer {
                 modifiers
             };
         } catch (error) {
-            console.error('解析方法失败:', line, error);
+            console.error('Failed to parse method:', line, error);
             return null;
         }
     }
 
     /**
-     * 智能分割参数，处理泛型和嵌套类型
+     * Smart parameter splitting, handling generics and nested types
      */
     private splitParameters(paramsStr: string): string[] {
         const params: string[] = [];
@@ -327,7 +327,7 @@ export class JavaClassAnalyzer {
 
 
     /**
-     * 获取javap命令路径
+     * Get javap command path
      */
     private getJavapCommand(): string {
         const javaHome = process.env.JAVA_HOME;
@@ -338,7 +338,7 @@ export class JavaClassAnalyzer {
     }
 
     /**
-     * 获取类的继承层次结构
+     * Get class inheritance hierarchy
      */
     async getInheritanceHierarchy(className: string, projectPath: string): Promise<string[]> {
         const analysis = await this.analyzeClass(className, projectPath);
@@ -349,7 +349,7 @@ export class JavaClassAnalyzer {
                 const superHierarchy = await this.getInheritanceHierarchy(analysis.superClass, projectPath);
                 hierarchy.unshift(...superHierarchy);
             } catch (error) {
-                // 如果父类不在当前项目中，直接添加
+                // If parent class is not in current project, add directly
                 hierarchy.unshift(analysis.superClass);
             }
         }
@@ -358,7 +358,7 @@ export class JavaClassAnalyzer {
     }
 
     /**
-     * 查找类的所有子类
+     * Find all subclasses of a class
      */
     async findSubClasses(className: string, projectPath: string): Promise<string[]> {
         const allClasses = await this.scanner.getAllClassNames(projectPath);
@@ -371,7 +371,7 @@ export class JavaClassAnalyzer {
                     subClasses.push(cls);
                 }
             } catch (error) {
-                // 忽略分析失败的类型
+                // Ignore types that failed analysis
             }
         }
 

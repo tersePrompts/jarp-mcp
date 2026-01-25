@@ -98,4 +98,6 @@ temp/
 
 # MCP specific
 .mcp-class-index.json
+# Exclude CFR JARs except the one we ship with
 lib/cfr-*.jar
+!lib/cfr-0.152.jar

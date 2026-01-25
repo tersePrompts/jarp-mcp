@@ -17,7 +17,7 @@
 
 ## <div align="center">⚡ Get Started in 10 Seconds</div>
 
-Create `.claude/mcp-config.json` in your Java project:
+Add this to your AI editor's MCP configuration:
 
 ```json
 {
@@ -32,7 +32,7 @@ Create `.claude/mcp-config.json` in your Java project:
 
 That's it. **No installation. No configuration. CFR decompiler bundled.**
 
-**What this enables:** Your AI agent (Claude, Cursor, etc.) can now:
+**What this enables:** Your AI agent (Claude, Cursor, Windsurf, Cline, etc.) can now:
 - Decompile any Java class from your dependencies
 - Analyze class structure, methods, and fields
 - Read actual source code instead of guessing
@@ -161,7 +161,22 @@ npm run build
 
 ## MCP Configuration
 
-### Claude Code (CLI)
+**Quick Setup** — Works with any MCP-compatible AI editor:
+
+```json
+{
+  "mcpServers": {
+    "jarp-mcp": {
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
+    }
+  }
+}
+```
+
+### Platform-Specific Setup
+
+#### Claude Code (CLI)
 
 Create `.claude/mcp-config.json` in your Java project root:
 

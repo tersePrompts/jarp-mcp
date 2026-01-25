@@ -383,17 +383,17 @@ By using these tools, you can provide accurate, helpful responses instead of gue
 
 ```
 ┌─────────────┐      ┌──────────────────┐      ┌─────────────────┐
-│   LLM Agent │ ───▶ │  MCP Server      │ ───▶ │  Maven Project  │
-│  (Claude/   │      │  (This Tool)     │      │  + .m2 Repo     │
+│  LLM Agent  │      │    MCP Server    │      │  Maven Project  │
+│  (Claude/   │ ───▶ │   (This Tool)    │ ───▶ │   + .m2 Repo    │
 │   GPT/      │      │                  │      │                 │
 │   Cursor)   │      │                  │      │                 │
-└─────────────┘      └──────────────────┘      └─────────────────┘
-                            │
-                            ▼
-                     ┌──────────────┐
-                     │ CFR 0.152    │
-                     │ Decompiler   │
-                     └──────────────┘
+└─────────────┘      └────────┬─────────┘      └─────────────────┘
+                              │
+                              ▼
+                     ┌────────────────┐
+                     │   CFR 0.152    │
+                     │   Decompiler   │
+                     └────────────────┘
 ```
 
 ### Workflow

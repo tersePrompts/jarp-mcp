@@ -32,7 +32,12 @@ Create `.claude/mcp-config.json` in your Java project:
 
 That's it. **No installation. No configuration. CFR decompiler bundled.**
 
-Restart your AI editor and ask it to decompile any Java class from your dependencies.
+**What this enables:** Your AI agent (Claude, Cursor, etc.) can now:
+- Decompile any Java class from your dependencies
+- Analyze class structure, methods, and fields
+- Read actual source code instead of guessing
+
+Restart your AI editor and try: *"Show me the source code for JpaRepository"*
 
 ---
 

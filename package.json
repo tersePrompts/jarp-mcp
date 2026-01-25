@@ -40,9 +40,9 @@
     "license": "Apache License 2.0",
     "repository": {
         "type": "git",
-        "url": "https://github.com/handsomestWei/java-class-analyzer-mcp-server.git"
+        "url": "https://github.com/tersePrompts/jarp-mcp.git"
     },
-    "homepage": "https://github.com/handsomestWei/java-class-analyzer-mcp-server#readme",
+    "homepage": "https://github.com/tersePrompts/jarp-mcp#readme",
     "engines": {
         "node": ">=16.0.0"
     },

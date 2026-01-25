@@ -44,23 +44,25 @@ This MCP server provides AI agents with direct access to decompiled Java source 
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g java-class-analyzer-mcp-server
+npm install -g jarp-mcp
 ```
 
 ### Local Installation
 
 ```bash
-npm install java-class-analyzer-mcp-server
+npm install jarp-mcp
 ```
 
 ### Install from Source
 
 ```bash
-git clone https://github.com/handsomestWei/java-class-analyzer-mcp-server.git
-cd java-class-analyzer-mcp-server
+git clone https://github.com/tersePrompts/jarp-mcp.git
+cd jarp-mcp
 npm install
 npm run build
 ```
+
+> **Note**: This is a fork of the original [java-class-analyzer-mcp-server](https://github.com/handsomestWei/java-class-analyzer-mcp-server) by [handsomestWei](https://github.com/handsomestWei). This version includes major upgrades and improvements.
 
 ## Configuration
 
@@ -115,7 +117,7 @@ Or use the local installation variant:
   "mcpServers": {
     "java-class-analyzer": {
       "command": "node",
-      "args": ["./node_modules/java-class-analyzer-mcp-server/dist/index.js"],
+      "args": ["./node_modules/jarp-mcp/dist/index.js"],
       "env": {
         "NODE_ENV": "production",
         "MAVEN_REPO": "/path/to/.m2/repository",
@@ -491,14 +493,22 @@ Set `NODE_ENV=development` to see detailed logs:
 
 ## Acknowledgments
 
-### Author & Maintainer
+### Original Creator
 
-This project is created and maintained by **[handsomestWei](https://github.com/handsomestWei)**.
+This project was originally created by **[handsomestWei](https://github.com/handsomestWei)**.
 
-- **GitHub**: [handsomestWei](https://github.com/handsomestWei)
-- **Repository**: [java-class-analyzer-mcp-server](https://github.com/handsomestWei/java-class-analyzer-mcp-server)
+- **Original Repository**: [java-class-analyzer-mcp-server](https://github.com/handsomestWei/java-class-analyzer-mcp-server)
 
 Thank you for building this invaluable tool that bridges the gap between AI agents and compiled Java code!
+
+### Current Maintainer
+
+This fork is maintained by **[tersePrompts](https://github.com/tersePrompts)**.
+
+- **GitHub**: [tersePrompts](https://github.com/tersePrompts)
+- **Repository**: [jarp-mcp](https://github.com/tersePrompts/jarp-mcp)
+
+Contributions including major upgrades (MCP SDK v1.25.3, CFR 0.152 bundling, comprehensive documentation rewrite, and internationalization).
 
 ### CFR Decompiler
 
@@ -558,7 +568,8 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 ## Links
 
-- **GitHub Repository**: [https://github.com/handsomestWei/java-class-analyzer-mcp-server](https://github.com/handsomestWei/java-class-analyzer-mcp-server)
+- **GitHub Repository**: [https://github.com/tersePrompts/jarp-mcp](https://github.com/tersePrompts/jarp-mcp)
+- **Original Project**: [https://github.com/handsomestWei/java-class-analyzer-mcp-server](https://github.com/handsomestWei/java-class-analyzer-mcp-server)
 - **Model Context Protocol**: [https://modelcontextprotocol.io](https://modelcontextprotocol.io)
 - **CFR Decompiler**: [https://www.benf.org/other/cfr/](https://www.benf.org/other/cfr/)
 - **MCP SDK**: [@modelcontextprotocol/sdk on npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk)

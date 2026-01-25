@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-Compatible-success?style=for-the-badge)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-[**Live Demo**](https://terseprompts.github.io/jarp-mcp/) · [**npm**](https://www.npmjs.com/package/jarp-mcp) · [**GitHub**](https://github.com/tersePrompts/jarp-mcp)
+[**npm**](https://www.npmjs.com/package/jarp-mcp) · [**GitHub**](https://github.com/tersePrompts/jarp-mcp) · [**GitHub Pages**](https://terseprompts.github.io/jarp-mcp/)
 
 </div>
 
@@ -159,11 +159,12 @@ npm run build
 
 ---
 
-## Configuration
+## MCP Configuration
 
-### Claude Code / Cursor
+### Claude Code (CLI)
 
-`.claude/mcp-config.json`:
+Create `.claude/mcp-config.json` in your Java project root:
+
 ```json
 {
   "mcpServers": {
@@ -177,7 +178,80 @@ npm run build
 
 ### Claude Desktop
 
-`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "jarp-mcp": {
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
+    }
+  }
+}
+```
+
+### Cursor IDE
+
+Settings → MCP Servers → Add Server:
+
+```json
+{
+  "mcpServers": {
+    "jarp-mcp": {
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
+    }
+  }
+}
+```
+
+Or in `.cursorrules`:
+```json
+{
+  "mcpServers": {
+    "jarp-mcp": {
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
+    }
+  }
+}
+```
+
+### Postman (with MCP Support)
+
+1. Open Postman → Settings → MCP Servers
+2. Add new server:
+
+```json
+{
+  "name": "jarp-mcp",
+  "command": "npx",
+  "args": ["-y", "jarp-mcp"]
+}
+```
+
+### Windsurf IDE
+
+In `.windsurfrules` or project settings:
+
+```json
+{
+  "mcpServers": {
+    "jarp-mcp": {
+      "command": "npx",
+      "args": ["-y", "jarp-mcp"]
+    }
+  }
+}
+```
+
+### Cline (VSCode Extension)
+
+In `.clinerules` or project settings:
+
 ```json
 {
   "mcpServers": {

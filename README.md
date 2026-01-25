@@ -381,19 +381,11 @@ By using these tools, you can provide accurate, helpful responses instead of gue
 
 ### Architecture
 
-```
-┌─────────────┐      ┌──────────────────┐      ┌─────────────────┐
-│  LLM Agent  │      │    MCP Server    │      │  Maven Project  │
-│  (Claude/   │ ───▶ │   (This Tool)    │ ───▶ │   + .m2 Repo    │
-│   GPT/      │      │                  │      │                 │
-│   Cursor)   │      │                  │      │                 │
-└─────────────┘      └────────┬─────────┘      └─────────────────┘
-                              │
-                              ▼
-                     ┌────────────────┐
-                     │   CFR 0.152    │
-                     │   Decompiler   │
-                     └────────────────┘
+```mermaid
+flowchart LR
+    A[LLM Agent<br/>Claude / GPT / Cursor] --> B[MCP Server<br/>This Tool]
+    B --> C[Maven Project<br/>+ .m2 Repo]
+    B --> D[CFR 0.152<br/>Decompiler]
 ```
 
 ### Workflow

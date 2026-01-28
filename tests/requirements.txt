@@ -1,0 +1,2 @@
+# Python dependencies for MCP testing
+psutil>=5.9.0

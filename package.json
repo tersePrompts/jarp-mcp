@@ -18,6 +18,8 @@
         "start": "node dist/index.js",
         "dev": "tsx src/index.ts",
         "test": "jest",
+        "test:mcp": "python tests/run_tests.py",
+        "test:ci": "npm run build && python tests/run_tests.py",
         "prepublishOnly": "npm run build",
         "prepack": "npm run build",
         "publish:npm": "npm publish",

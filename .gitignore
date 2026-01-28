@@ -101,3 +101,6 @@ temp/
 # Exclude CFR JARs except the one we ship with
 lib/cfr-*.jar
 !lib/cfr-0.152.jar
+# Test JARs
+# For local MCP testing
+test-jars/

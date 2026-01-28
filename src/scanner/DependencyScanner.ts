@@ -231,11 +231,18 @@ export class DependencyScanner {
                 });
 
                 zipfile.on('end', () => {
-                    resolve(classes);
+                    zipfile.close((closeErr: any) => {
+                        if (closeErr) {
+                            console.warn(`Failed to close JAR file ${jarPath}:`, closeErr);
+                        }
+                        resolve(classes);
+                    });
                 });
 
                 zipfile.on('error', (err: any) => {
-                    reject(err);
+                    zipfile.close(() => {
+                        reject(err);
+                    });
                 });
             });
         });

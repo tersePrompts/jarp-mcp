@@ -134,12 +134,18 @@ export class DecompilerService {
                 let found = false;
                 zipfile.readEntry();
 
+                const closeAndReject = (err: Error) => {
+                    zipfile.close(() => {
+                        reject(err);
+                    });
+                };
+
                 zipfile.on('entry', (entry: any) => {
                     if (entry.fileName === classFileName) {
                         found = true;
                         zipfile.openReadStream(entry, (err: any, readStream: any) => {
                             if (err) {
-                                reject(new Error(`Unable to read class file ${classFileName} from JAR package: ${err.message}`));
+                                closeAndReject(new Error(`Unable to read class file ${classFileName} from JAR package: ${err.message}`));
                                 return;
                             }
 
@@ -148,11 +154,13 @@ export class DecompilerService {
 
                             writeStream.on('close', () => {
                                 console.error(`Class file extracted successfully: ${classFilePath}`);
-                                resolve(classFilePath);
+                                zipfile.close(() => {
+                                    resolve(classFilePath);
+                                });
                             });
 
                             writeStream.on('error', (err: any) => {
-                                reject(new Error(`Failed to write temporary file: ${err.message}`));
+                                closeAndReject(new Error(`Failed to write temporary file: ${err.message}`));
                             });
                         });
                     } else {
@@ -162,12 +170,12 @@ export class DecompilerService {
 
                 zipfile.on('end', () => {
                     if (!found) {
-                        reject(new Error(`Class file ${classFileName} not found in JAR package ${jarPath}`));
+                        closeAndReject(new Error(`Class file ${classFileName} not found in JAR package ${jarPath}`));
                     }
                 });
 
                 zipfile.on('error', (err: any) => {
-                    reject(new Error(`Failed to read JAR package: ${err.message}`));
+                    closeAndReject(new Error(`Failed to read JAR package: ${err.message}`));
                 });
             });
         });

@@ -7,6 +7,9 @@ Runs all test suites against the MCP server.
 
 import asyncio
 import sys
+import os
+import platform
+import shutil
 from pathlib import Path
 
 # Add client to path
@@ -24,7 +27,22 @@ from test_performance import PERFORMANCE_TESTS
 def get_server_command() -> list[str]:
     """Get the command to start the MCP server"""
     project_root = Path(__file__).parent.parent
-    return ["node", str(project_root / "dist" / "index.js")]
+
+    # On Windows, use node.exe; on Unix, use node
+    node_cmd = "node.exe" if platform.system() == "Windows" else "node"
+
+    # Find node in PATH if not directly available
+    if shutil.which(node_cmd):
+        return [node_cmd, str(project_root / "dist" / "index.js")]
+
+    # Try to find node in common locations
+    if platform.system() == "Windows":
+        program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
+        node_path = shutil.which("node", path=f"{program_files}\\nodejs")
+        if node_path:
+            return [node_path, str(project_root / "dist" / "index.js")]
+
+    return [node_cmd, str(project_root / "dist" / "index.js")]
 
 
 async def main():
@@ -32,17 +50,30 @@ async def main():
     project_root = Path(__file__).parent.parent
 
     # Build the project first
-    import subprocess
     print("Building project...")
-    result = subprocess.run(
-        ["npm", "run", "build"],
-        cwd=project_root,
-        capture_output=True
-    )
-    if result.returncode != 0:
-        print(f"Build failed: {result.stderr.decode()}")
-        sys.exit(1)
-    print("Build complete.\n")
+
+    # Find npm command
+    npm_cmd = shutil.which("npm.cmd" if platform.system() == "Windows" else "npm")
+    if not npm_cmd and platform.system() == "Windows":
+        # Try common Windows locations
+        program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
+        npm_path = os.path.join(program_files, "nodejs", "npm.cmd")
+        if os.path.exists(npm_path):
+            npm_cmd = npm_path
+
+    if not npm_cmd:
+        print("Warning: npm not found, assuming already built...")
+    else:
+        import subprocess
+        result = subprocess.run(
+            [npm_cmd, "run", "build"],
+            cwd=project_root,
+            capture_output=True
+        )
+        if result.returncode != 0:
+            print(f"Build failed: {result.stderr.decode()}")
+            sys.exit(1)
+        print("Build complete.\n")
 
     # Create test runner
     runner = TestRunner(

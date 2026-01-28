@@ -9,6 +9,7 @@ import asyncio
 import json
 import sys
 import time
+import inspect
 from dataclasses import dataclass
 from typing import Any, Optional
 from pathlib import Path
@@ -182,9 +183,20 @@ class TestRunner:
 
     async def run_test(self, name: str, test_func) -> TestResult:
         """Run a single test function"""
+        import inspect
+
         start = time.time()
         try:
-            await test_func(self.client)
+            # Check if test function needs project_root parameter
+            sig = inspect.signature(test_func)
+            if "project_root" in sig.parameters or len(sig.parameters) > 1:
+                # Pass both client and project_root
+                project_root = self.server_cwd if self.server_cwd else Path.cwd()
+                await test_func(self.client, project_root)
+            else:
+                # Pass only client
+                await test_func(self.client)
+
             duration = time.time() - start
             return TestResult(name=name, passed=True, duration=duration)
         except Exception as e:
@@ -209,7 +221,7 @@ class TestRunner:
             result = await self.run_test(test.__name__, test)
             results.append(result)
 
-            status = "✓" if result.passed else "✗"
+            status = "[PASS]" if result.passed else "[FAIL]"
             print(f"{status} {result.name} ({result.duration:.2f}s)")
             if not result.passed:
                 print(f"  Error: {result.error}")
@@ -234,7 +246,7 @@ class TestRunner:
         total_duration = sum(r.total_duration for r in self.results)
 
         for suite in self.results:
-            status = "✓" if suite.passed else "✗"
+            status = "[PASS]" if suite.passed else "[FAIL]"
             print(f"{status} {suite.name}: {suite.passed_count}/{len(suite.tests)} passed ({suite.total_duration:.2f}s)")
 
         print(f"\nTotal: {total_passed}/{total_passed + total_failed} tests passed")

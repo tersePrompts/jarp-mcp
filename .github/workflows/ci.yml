@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22, 24]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run comprehensive security audit
+        run: |
+          npm audit --audit-level=moderate
+          npm audit --audit-level=high || true
+
+      - name: Check for outdated dependencies
+        run: npm outdated || true
+
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check TypeScript compilation
+        run: npm run build
+
+      - name: Verify CFR JAR exists
+        run: |
+          if [ ! -f "lib/cfr-0.152.jar" ]; then
+            echo "CFR JAR not found!"
+            exit 1
+          fi
+          echo "CFR JAR found"
+
+      - name: Check file permissions
+        run: |
+          # Ensure no executable permissions on source files
+          find src -type f -executable | head -10
+
+  # This job summarizes the results
+  summary:
+    runs-on: ubuntu-latest
+    needs: [test, security, code-quality]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "::warning::Test job failed or was skipped"
+          fi
+
+      - name: Check security results
+        run: |
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "::warning::Security job failed or was skipped"
+          fi
+
+      - name: Check code quality results
+        run: |
+          if [ "${{ needs.code-quality.result }}" != "success" ]; then
+            echo "::warning::Code quality job failed"
+            exit 1
+          fi

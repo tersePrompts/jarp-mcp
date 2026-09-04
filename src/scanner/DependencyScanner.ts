@@ -1,12 +1,13 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import fs from 'fs-extra';
 import * as path from 'path';
-import { parseString } from 'xml2js';
 import * as yauzl from 'yauzl';
+import { runCommand, getMavenCommand } from '../utils/shell.js';
+import { validateProjectPath, validateClassIndexEntry } from '../utils/validation.js';
+import { CONSTANTS } from '../utils/constants.js';
+import { createLogger } from '../utils/logger.js';
+import { getConfig, getMavenRepositoryPath } from '../config/Config.js';
 
-const execAsync = promisify(exec);
-const parseXmlAsync = promisify(parseString);
+const logger = createLogger('DependencyScanner');
 
 export interface ClassIndexEntry {
     className: string;
@@ -22,20 +23,45 @@ export interface ScanResult {
     sampleEntries: string[];
 }
 
+/**
+ * Tracks scanning progress for logging.
+ */
+interface ScanProgress {
+    processedJars: number;
+    totalJars: number;
+    failedJars: number;
+}
+
+/**
+ * Tracks JAR processing limits (for zip bomb protection).
+ */
+interface JarProcessingState {
+    entryCount: number;
+    uncompressedSize: number;
+}
+
 export class DependencyScanner {
-    private indexCache: Map<string, ClassIndexEntry[]> = new Map();
+    private config = getConfig();
 
     /**
-     * Scan all dependencies of a Maven project and build mapping index from class names to JAR packages
+     * Scan all dependencies of a Maven project and build mapping index from class names to JAR packages.
+     * @param projectPath - Path to the Maven project directory
+     * @param forceRefresh - Whether to force rebuild the index
+     * @returns Scan results with statistics
      */
     async scanProject(projectPath: string, forceRefresh: boolean = false): Promise<ScanResult> {
-        const indexPath = path.join(projectPath, '.mcp-class-index.json');
-        const isDebug = process.env.NODE_ENV === 'development';
+        // Validate input to prevent path traversal
+        validateProjectPath(projectPath);
+
+        const indexPath = path.join(projectPath, CONSTANTS.INDEX_FILE_NAME);
+        const isDebug = this.config.debugMode;
+
+        logger.info(`Starting Maven dependency scan`, { projectPath, forceRefresh });
 
         // If force refresh, delete old index file first
         if (forceRefresh && await fs.pathExists(indexPath)) {
             if (isDebug) {
-                console.error('Force refresh: deleting old index file');
+                logger.debug('Force refresh: deleting old index file');
             }
             await fs.remove(indexPath);
         }
@@ -43,46 +69,72 @@ export class DependencyScanner {
         // Check cache
         if (!forceRefresh && await fs.pathExists(indexPath)) {
             if (isDebug) {
-                console.error('Using cached class index');
+                logger.debug('Using cached class index');
             }
-            const cachedIndex = await fs.readJson(indexPath);
-            return {
-                jarCount: cachedIndex.jarCount,
-                classCount: cachedIndex.classCount,
-                indexPath,
-                sampleEntries: cachedIndex.sampleEntries
-            };
-        }
-
-        if (isDebug) {
-            console.error('Starting Maven dependency scan...');
+            try {
+                const cachedIndex = await fs.readJson(indexPath);
+                // Validate index file size
+                const indexSize = JSON.stringify(cachedIndex).length;
+                if (indexSize > CONSTANTS.MAX_INDEX_SIZE) {
+                    logger.warn('Index file exceeds maximum size, rebuilding');
+                    await fs.remove(indexPath);
+                } else {
+                    // Validate index integrity before using
+                    this.validateIndexData(cachedIndex);
+                    return {
+                        jarCount: cachedIndex.jarCount || 0,
+                        classCount: cachedIndex.classCount || 0,
+                        indexPath,
+                        sampleEntries: cachedIndex.sampleEntries || []
+                    };
+                }
+            } catch (error) {
+                logger.warn('Failed to read cached index, rebuilding', { error });
+            }
         }
 
         // 1. Get Maven dependency tree
         const dependencies = await this.getMavenDependencies(projectPath);
-        console.error(`Found ${dependencies.length} dependency JARs`);
+        logger.info(`Found ${dependencies.length} dependency JARs`);
+
+        if (dependencies.length === 0) {
+            throw new Error('No dependencies found. Please ensure this is a valid Maven project with dependencies.');
+        }
 
         // 2. Parse each JAR package and build class index
         const classIndex: ClassIndexEntry[] = [];
-        let processedJars = 0;
+        const progress: ScanProgress = {
+            processedJars: 0,
+            totalJars: dependencies.length,
+            failedJars: 0
+        };
 
         for (const jarPath of dependencies) {
             try {
+                // Check JAR file size
+                const stats = await fs.stat(jarPath);
+                if (stats.size > this.config.maxJarSize) {
+                    logger.warn(`Skipping JAR exceeding size limit`, { jarPath: path.basename(jarPath), size: stats.size });
+                    progress.failedJars++;
+                    continue;
+                }
+
                 const classes = await this.extractClassesFromJar(jarPath);
                 classIndex.push(...classes);
-                processedJars++;
+                progress.processedJars++;
 
-                if (processedJars % 10 === 0) {
-                    console.error(`Processed ${processedJars}/${dependencies.length} JARs`);
+                if (progress.processedJars % 10 === 0) {
+                    logger.debug(`Processed ${progress.processedJars}/${dependencies.length} JARs`);
                 }
             } catch (error) {
-                console.warn(`Failed to process JAR: ${jarPath}, error: ${error}`);
+                progress.failedJars++;
+                logger.warn(`Failed to process JAR`, { jarPath: path.basename(jarPath), error: error instanceof Error ? error.message : String(error) });
             }
         }
 
         // 3. Save index to file
         const result: ScanResult = {
-            jarCount: processedJars,
+            jarCount: progress.processedJars,
             classCount: classIndex.length,
             indexPath,
             sampleEntries: classIndex.slice(0, 10).map(entry =>
@@ -96,23 +148,30 @@ export class DependencyScanner {
             lastUpdated: new Date().toISOString()
         }, { spaces: 2 });
 
-        console.error(`Scan complete! Processed ${processedJars} JARs, indexed ${classIndex.length} classes`);
+        logger.info(`Scan complete! Processed ${progress.processedJars} JARs, indexed ${classIndex.length} classes`, {
+            failedJars: progress.failedJars
+        });
 
         return result;
     }
 
     /**
-     * Get all JAR package paths from Maven dependency tree
+     * Get all JAR package paths from Maven dependency tree.
+     * @param projectPath - Path to the Maven project
+     * @returns Array of JAR file paths
      */
     private async getMavenDependencies(projectPath: string): Promise<string[]> {
         try {
-            // Build Maven command path
-            const mavenCmd = this.getMavenCommand();
+            const mavenCmd = getMavenCommand();
 
-            // Execute mvn dependency:tree command
-            const { stdout } = await execAsync(`${mavenCmd} dependency:tree -DoutputType=text`, {
+            logger.debug(`Running Maven dependency tree`, { projectPath, mavenCmd });
+
+            const { stdout } = await runCommand({
+                command: mavenCmd,
+                args: ['dependency:tree', '-DoutputType=text'],
                 cwd: projectPath,
-                timeout: 60000 // 60 second timeout
+                timeout: this.config.mavenTimeout,
+                silent: true,
             });
 
             // Parse output, extract JAR package paths
@@ -124,64 +183,109 @@ export class DependencyScanner {
                 const match = line.match(/\[INFO\].*?([a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+)/);
                 if (match) {
                     const dependency = match[1];
-                    // Build JAR package path
-                    const jarPath = await this.resolveJarPath(dependency, projectPath);
-                    if (jarPath && await fs.pathExists(jarPath)) {
-                        jarPaths.add(jarPath);
+                    // Validate dependency format before processing
+                    const parts = dependency.split(':');
+                    if (parts.length >= 4 && parts.every(p => p.length > 0)) {
+                        const jarPath = await this.resolveJarPath(dependency);
+                        if (jarPath && await fs.pathExists(jarPath)) {
+                            jarPaths.add(jarPath);
+                        }
                     }
                 }
             }
 
             return Array.from(jarPaths);
         } catch (error) {
-            console.error('Failed to get Maven dependencies:', error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            logger.error('Failed to get Maven dependencies', { error: errorMsg });
+
+            // Provide helpful error message if Maven is not found
+            if (errorMsg.includes('not recognized') || errorMsg.includes('not found')) {
+                throw new Error(
+                    'Maven command not found. Please install Maven or set MAVEN_HOME environment variable. ' +
+                    'You can also pass MAVEN_HOME in your MCP server config: "env": { "MAVEN_HOME": "path/to/maven" }'
+                );
+            }
+
             // If Maven command fails, try scanning from local repository
-            return await this.scanLocalMavenRepo(projectPath);
+            return await this.scanLocalMavenRepo();
         }
     }
 
     /**
-     * Scan JAR packages from local Maven repository
+     * Scan JAR packages from local Maven repository.
+     * Note: This is a fallback method and may be slow.
+     * @returns Array of JAR file paths
      */
-    private async scanLocalMavenRepo(projectPath: string): Promise<string[]> {
-        const mavenRepoPath = this.getMavenRepositoryPath();
+    private async scanLocalMavenRepo(): Promise<string[]> {
+        const mavenRepoPath = getMavenRepositoryPath();
+
+        logger.warn(`Maven scan failed, falling back to local repository scan`, { mavenRepoPath });
 
         if (!await fs.pathExists(mavenRepoPath)) {
-            throw new Error('Maven local repository does not exist');
+            throw new Error('Maven local repository does not exist and Maven command failed');
         }
 
+        // Limit the scan to avoid performance issues
         const jarFiles: string[] = [];
+        let scannedDirs = 0;
+        const MAX_DIRS = 1000; // Safety limit
 
-        const scanDir = async (dir: string) => {
-            const entries = await fs.readdir(dir, { withFileTypes: true });
+        const scanDir = async (dir: string, depth: number = 0): Promise<void> => {
+            if (scannedDirs > MAX_DIRS || depth > 10) {
+                return; // Prevent infinite recursion and excessive scanning
+            }
 
-            for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name);
+            scannedDirs++;
 
-                if (entry.isDirectory()) {
-                    await scanDir(fullPath);
-                } else if (entry.isFile() && entry.name.endsWith('.jar')) {
-                    jarFiles.push(fullPath);
+            try {
+                const entries = await fs.readdir(dir, { withFileTypes: true });
+
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+
+                    if (entry.isDirectory()) {
+                        await scanDir(fullPath, depth + 1);
+                    } else if (entry.isFile() && entry.name.endsWith('.jar')) {
+                        jarFiles.push(fullPath);
+                    }
                 }
+            } catch (error) {
+                // Skip directories we can't read
+                logger.debug(`Skipping directory`, { dir, error });
             }
         };
 
         await scanDir(mavenRepoPath);
+        logger.info(`Found ${jarFiles.length} JARs in local repository`);
+
         return jarFiles;
     }
 
     /**
-     * Resolve dependency coordinates to get JAR package path
+     * Resolve dependency coordinates to get JAR package path.
+     * @param dependency - Maven dependency string (groupId:artifactId:type:version:scope)
+     * @returns Resolved JAR file path or null
      */
-    private async resolveJarPath(dependency: string, projectPath: string): Promise<string | null> {
-        const [groupId, artifactId, type, version, scope] = dependency.split(':');
+    private async resolveJarPath(dependency: string): Promise<string | null> {
+        const parts = dependency.split(':');
+        if (parts.length < 4) {
+            return null;
+        }
+
+        const [groupId, artifactId, type, version] = parts;
+
+        // Validate all parts are non-empty
+        if (!groupId || !artifactId || !type || !version) {
+            return null;
+        }
 
         if (type !== 'jar') {
             return null;
         }
 
-        // Use unified Maven repository path getter method
-        const mavenRepoPath = this.getMavenRepositoryPath();
+        // Use Maven repository path
+        const mavenRepoPath = getMavenRepositoryPath();
         const groupPath = groupId.replace(/\./g, '/');
         const jarPath = path.join(
             mavenRepoPath,
@@ -195,11 +299,17 @@ export class DependencyScanner {
     }
 
     /**
-     * Extract all class file information from JAR package
+     * Extract all class file information from JAR package with archive bomb protection.
+     * @param jarPath - Path to JAR file
+     * @returns Array of class index entries
      */
     private async extractClassesFromJar(jarPath: string): Promise<ClassIndexEntry[]> {
         return new Promise((resolve, reject) => {
             const classes: ClassIndexEntry[] = [];
+            const state: JarProcessingState = {
+                entryCount: 0,
+                uncompressedSize: 0,
+            };
 
             yauzl.open(jarPath, { lazyEntries: true }, (err: any, zipfile: any) => {
                 if (err) {
@@ -210,9 +320,28 @@ export class DependencyScanner {
                 zipfile.readEntry();
 
                 zipfile.on('entry', (entry: any) => {
-                    if (entry.fileName.endsWith('.class') && !entry.fileName.includes('$')) {
+                    // Archive bomb protection
+                    state.entryCount++;
+                    if (state.entryCount > CONSTANTS.MAX_ENTRIES_PER_JAR) {
+                        zipfile.close(() => {
+                            reject(new Error(`JAR file exceeds maximum entry count (${CONSTANTS.MAX_ENTRIES_PER_JAR}): possible zip bomb`));
+                        });
+                        return;
+                    }
+
+                    if (entry.uncompressedSize) {
+                        state.uncompressedSize += entry.uncompressedSize;
+                        if (state.uncompressedSize > CONSTANTS.MAX_UNCOMPRESSED_SIZE_PER_JAR) {
+                            zipfile.close(() => {
+                                reject(new Error(`JAR file exceeds maximum uncompressed size (${CONSTANTS.MAX_UNCOMPRESSED_SIZE_PER_JAR}): possible zip bomb`));
+                            });
+                            return;
+                        }
+                    }
+
+                    if (entry.fileName.endsWith(CONSTANTS.CLASS_FILE_EXT) && !entry.fileName.includes('$')) {
                         const className = entry.fileName
-                            .replace(/\.class$/, '')
+                            .replace(CONSTANTS.CLASS_FILE_EXT, '')
                             .replace(/\//g, '.');
 
                         const lastDotIndex = className.lastIndexOf('.');
@@ -233,7 +362,7 @@ export class DependencyScanner {
                 zipfile.on('end', () => {
                     zipfile.close((closeErr: any) => {
                         if (closeErr) {
-                            console.warn(`Failed to close JAR file ${jarPath}:`, closeErr);
+                            logger.warn(`Failed to close JAR file`, { jarPath: path.basename(jarPath), error: closeErr });
                         }
                         resolve(classes);
                     });
@@ -249,62 +378,90 @@ export class DependencyScanner {
     }
 
     /**
-     * Find corresponding JAR package path by class name
+     * Validate index data structure and integrity.
+     * @param indexData - Index data to validate
+     * @throws Error if index is corrupted
+     */
+    private validateIndexData(indexData: any): void {
+        if (!indexData || typeof indexData !== 'object') {
+            throw new Error('Index file is corrupted: invalid root object');
+        }
+
+        if (!Array.isArray(indexData.classIndex)) {
+            throw new Error('Index file is corrupted: classIndex is not an array');
+        }
+
+        // Validate each entry
+        for (const entry of indexData.classIndex) {
+            try {
+                validateClassIndexEntry(entry);
+            } catch (error) {
+                throw new Error(`Index file is corrupted: invalid entry - ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+    }
+
+    /**
+     * Find corresponding JAR package path by class name.
+     * @param className - Fully qualified class name
+     * @param projectPath - Path to the project directory
+     * @returns JAR file path or null if not found
      */
     async findJarForClass(className: string, projectPath: string): Promise<string | null> {
-        const indexPath = path.join(projectPath, '.mcp-class-index.json');
+        validateProjectPath(projectPath);
+
+        const indexPath = path.join(projectPath, CONSTANTS.INDEX_FILE_NAME);
 
         if (!await fs.pathExists(indexPath)) {
             throw new Error('Class index does not exist, please run dependency scan first');
         }
 
-        const indexData = await fs.readJson(indexPath);
-        const classIndex: ClassIndexEntry[] = indexData.classIndex;
+        try {
+            const indexData = await fs.readJson(indexPath);
 
-        const entry = classIndex.find(entry => entry.className === className);
-        return entry ? entry.jarPath : null;
+            // Validate index before using
+            this.validateIndexData(indexData);
+
+            const classIndex: ClassIndexEntry[] = indexData.classIndex || [];
+
+            const entry = classIndex.find(entry => entry.className === className);
+            return entry ? entry.jarPath : null;
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('corrupted')) {
+                throw error;
+            }
+            logger.error('Failed to read class index', { error });
+            throw new Error('Failed to read class index file');
+        }
     }
 
     /**
-     * Get all indexed class names
+     * Get all indexed class names.
+     * @param projectPath - Path to the project directory
+     * @returns Array of class names
      */
     async getAllClassNames(projectPath: string): Promise<string[]> {
-        const indexPath = path.join(projectPath, '.mcp-class-index.json');
+        validateProjectPath(projectPath);
+
+        const indexPath = path.join(projectPath, CONSTANTS.INDEX_FILE_NAME);
 
         if (!await fs.pathExists(indexPath)) {
             return [];
         }
 
-        const indexData = await fs.readJson(indexPath);
-        const classIndex: ClassIndexEntry[] = indexData.classIndex;
+        try {
+            const indexData = await fs.readJson(indexPath);
 
-        return classIndex.map(entry => entry.className);
-    }
+            // Validate index before using
+            this.validateIndexData(indexData);
 
-    /**
-     * Get Maven command path
-     */
-    private getMavenCommand(): string {
-        const mavenHome = process.env.MAVEN_HOME;
-        if (mavenHome) {
-            const mavenCmd = process.platform === 'win32' ? 'mvn.cmd' : 'mvn';
-            return path.join(mavenHome, 'bin', mavenCmd);
+            const classIndex: ClassIndexEntry[] = indexData.classIndex || [];
+
+            return classIndex.map(entry => entry.className);
+        } catch (error) {
+            logger.error('Failed to read class index', { error });
+            return [];
         }
-        return 'mvn'; // Fallback to mvn in PATH
-    }
-
-    /**
-     * Get Maven local repository path
-     */
-    private getMavenRepositoryPath(): string {
-        // 1. Prioritize repository path specified by MAVEN_REPO environment variable
-        const mavenRepo = process.env.MAVEN_REPO;
-        if (mavenRepo) {
-            return mavenRepo;
-        }
-
-        // 2. Use default Maven local repository path
-        const homeDir = process.env.HOME || process.env.USERPROFILE;
-        return path.join(homeDir!, '.m2', 'repository');
     }
 }
+

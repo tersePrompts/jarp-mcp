@@ -183,9 +183,11 @@ export function sanitizePath(filePath: string): string {
         return '(non-string path)';
     }
 
-    // Don't expose full paths in logs - just the filename
-    const parsed = path.parse(filePath);
-    return parsed.base;
+    // Don't expose full paths in logs - just the filename.
+    // Split on both separators regardless of platform, since logs may
+    // contain Windows-style paths even on POSIX systems.
+    const segments = filePath.split(/[\\/]/).filter(Boolean);
+    return segments[segments.length - 1] ?? filePath;
 }
 
 /**

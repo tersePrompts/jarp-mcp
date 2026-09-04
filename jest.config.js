@@ -18,9 +18,6 @@ export default {
             'ts-jest',
             {
                 useESM: true,
-                // Transpile per-file (no full-program type check): the root
-                // tsconfig sets rootDir: "src", which tests live outside of.
-                isolatedModules: true,
             },
         ],
     },
